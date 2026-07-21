@@ -4,4 +4,18 @@ query RunInput {
       value
     }
   }
+  cart {
+    lines {
+      id
+      attribute(key: "_upsell_rule_id") {
+        value
+      }
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          id
+        }
+      }
+    }
+  }
 }

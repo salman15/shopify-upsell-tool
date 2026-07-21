@@ -5,10 +5,13 @@
     "input": {
       "discountNode": {
         "metafield": null
+      },
+      "cart": {
+        "lines": []
       }
     },
     "output": {
-      "discountApplicationStrategy": "FIRST",
+      "discountApplicationStrategy": "ALL",
       "discounts": []
     }
   }

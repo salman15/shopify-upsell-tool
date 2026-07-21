@@ -61,6 +61,9 @@ model ToolSettings {
   shop              String   @unique
   popupEnabled      Boolean  @default(true)
   cartBundleEnabled Boolean  @default(true)
+  // GID of the DiscountAutomaticApp node created for the upsell-discount Function,
+  // once the merchant has activated it from the settings page. Null until then.
+  discountId        String?
   updatedAt         DateTime @updatedAt
 }
 

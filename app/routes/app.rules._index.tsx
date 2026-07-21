@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { authenticate } from "../shopify.server";
 import { deleteRule, listRules, setRuleEnabled } from "../lib/upsell/rules.server";
+import { syncDiscountMetafield } from "../lib/upsell/discount.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -10,7 +11,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
   const id = String(formData.get("id"));
@@ -20,6 +21,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } else if (intent === "delete") {
     await deleteRule(session.shop, id);
   }
+
+  await syncDiscountMetafield(admin, session.shop);
 
   return { ok: true };
 };

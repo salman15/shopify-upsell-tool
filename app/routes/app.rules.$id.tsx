@@ -4,6 +4,7 @@ import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { createRule, getRule, updateRule } from "../lib/upsell/rules.server";
+import { syncDiscountMetafield } from "../lib/upsell/discount.server";
 import { ruleInputSchema } from "../lib/upsell/schema";
 import { log } from "../lib/logger.server";
 
@@ -69,7 +70,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const id = params.id!;
   const body = await request.json();
 
@@ -81,10 +82,12 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   if (id === "new") {
     const rule = await createRule(session.shop, parsed.data);
+    await syncDiscountMetafield(admin, session.shop);
     return { ok: true, id: rule.id };
   }
 
   await updateRule(session.shop, id, parsed.data);
+  await syncDiscountMetafield(admin, session.shop);
   return { ok: true, id };
 };
 

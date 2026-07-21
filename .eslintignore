@@ -3,3 +3,5 @@ build
 public/build
 */*.yml
 .shopify
+app/types
+extensions
