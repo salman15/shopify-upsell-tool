@@ -8,8 +8,9 @@ import { syncDiscountMetafield } from "../lib/upsell/discount.server";
 import { ruleInputSchema } from "../lib/upsell/schema";
 import { log } from "../lib/logger.server";
 
-type ResourceLabel = { title: string; image: string | null };
-type Selection = { id: string; title: string; image: string | null };
+type VariantOption = { id: string; title: string };
+type ResourceLabel = { title: string; image: string | null; variants?: VariantOption[] };
+type Selection = { id: string; title: string; image: string | null; variants?: VariantOption[] };
 
 const RESOURCE_QUERY = `#graphql
   query UpsellResourceLabels($ids: [ID!]!) {
@@ -18,6 +19,9 @@ const RESOURCE_QUERY = `#graphql
       ... on Product {
         title
         featuredImage { url }
+        variants(first: 25) {
+          nodes { id title }
+        }
       }
       ... on Collection {
         title
@@ -36,7 +40,15 @@ async function hydrateLabels(
   if (ids.length === 0) return {};
   const response = await admin.graphql(RESOURCE_QUERY, { variables: { ids } });
   const json = (await response.json()) as {
-    data?: { nodes: ({ id: string; title?: string; featuredImage?: { url: string }; image?: { url: string } } | null)[] };
+    data?: {
+      nodes: ({
+        id: string;
+        title?: string;
+        featuredImage?: { url: string };
+        image?: { url: string };
+        variants?: { nodes: { id: string; title: string }[] };
+      } | null)[];
+    };
   };
   const labels: Record<string, ResourceLabel> = {};
   for (const node of json.data?.nodes ?? []) {
@@ -44,6 +56,7 @@ async function hydrateLabels(
     labels[node.id] = {
       title: node.title ?? node.id,
       image: node.featuredImage?.url ?? node.image?.url ?? null,
+      variants: node.variants?.nodes,
     };
   }
   return labels;
@@ -100,6 +113,7 @@ type OfferState = {
   targetType: TargetType;
   selections: Selection[];
   variantOptionMode: VariantOptionMode;
+  fixedVariantId: string;
 };
 
 export default function RuleEditor() {
@@ -112,6 +126,7 @@ export default function RuleEditor() {
     id,
     title: labels[id]?.title ?? id,
     image: labels[id]?.image ?? null,
+    variants: labels[id]?.variants,
   });
 
   const [toolType, setToolType] = useState<ToolType>(rule?.toolType ?? "POPUP");
@@ -134,9 +149,17 @@ export default function RuleEditor() {
       targetType: offer.targetType,
       selections: offer.targetIds.map(toLabel),
       variantOptionMode: offer.variantOptionMode,
+      fixedVariantId: offer.fixedVariantId ?? "",
     })) ?? [
-      { targetType: "PRODUCT", selections: [], variantOptionMode: "INDEPENDENT" },
+      { targetType: "PRODUCT", selections: [], variantOptionMode: "INDEPENDENT", fixedVariantId: "" },
     ],
+  );
+
+  const [startAt, setStartAt] = useState(
+    rule?.startAt ? new Date(rule.startAt).toISOString().slice(0, 10) : "",
+  );
+  const [endAt, setEndAt] = useState(
+    rule?.endAt ? new Date(rule.endAt).toISOString().slice(0, 10) : "",
   );
 
   const isSaving = fetcher.state === "submitting";
@@ -173,13 +196,18 @@ export default function RuleEditor() {
         i === index
           ? {
               ...o,
-              selections: result.map(
-                (r: { id: string; title: string; images?: { originalSrc?: string }[] }) => ({
-                  id: r.id,
-                  title: r.title,
-                  image: r.images?.[0]?.originalSrc ?? null,
-                }),
-              ),
+              fixedVariantId: "",
+              selections: result.map((r) => ({
+                id: r.id,
+                title: r.title,
+                image: "images" in r ? r.images?.[0]?.originalSrc ?? null : null,
+                variants:
+                  "variants" in r
+                    ? (r.variants ?? [])
+                        .filter((v): v is { id: string; title: string } => Boolean(v.id && v.title))
+                        .map((v) => ({ id: v.id, title: v.title }))
+                    : undefined,
+              })),
             }
           : o,
       ),
@@ -189,14 +217,19 @@ export default function RuleEditor() {
   const addOfferSlot = () =>
     setOffers((prev) => [
       ...prev,
-      { targetType: "PRODUCT", selections: [], variantOptionMode: "INDEPENDENT" },
+      { targetType: "PRODUCT", selections: [], variantOptionMode: "INDEPENDENT", fixedVariantId: "" },
     ]);
 
   const removeOfferSlot = (index: number) =>
     setOffers((prev) => prev.filter((_, i) => i !== index));
 
   const canSave = useMemo(
-    () => name.trim().length > 0 && triggerSelections.length > 0 && offers.every((o) => o.selections.length > 0),
+    () =>
+      name.trim().length > 0 &&
+      triggerSelections.length > 0 &&
+      offers.every(
+        (o) => o.selections.length > 0 && (o.variantOptionMode !== "FIXED" || o.fixedVariantId),
+      ),
     [name, triggerSelections, offers],
   );
 
@@ -216,10 +249,13 @@ export default function RuleEditor() {
       headline: headline || null,
       subheading: subheading || null,
       buttonText: buttonText || null,
+      startAt: startAt ? new Date(`${startAt}T00:00:00.000Z`).toISOString() : "",
+      endAt: endAt ? new Date(`${endAt}T00:00:00.000Z`).toISOString() : "",
       offers: offers.map((o, i) => ({
         targetType: o.targetType,
         targetIds: o.selections.map((s) => s.id),
         variantOptionMode: o.variantOptionMode,
+        fixedVariantId: o.variantOptionMode === "FIXED" ? o.fixedVariantId || null : null,
         sortOrder: i,
       })),
     };
@@ -343,6 +379,31 @@ export default function RuleEditor() {
                     <s-option value="FIXED">Fixed — always the same variant</s-option>
                   </s-select>
                 )}
+                {toolType === "CART_BUNDLE" &&
+                  offer.variantOptionMode === "FIXED" &&
+                  (offer.targetType !== "PRODUCT" || offer.selections.length !== 1 ? (
+                    <s-paragraph>
+                      Fixed mode needs exactly one product picked above (not a collection) so
+                      there&apos;s a single variant list to choose from.
+                    </s-paragraph>
+                  ) : (
+                    <s-select
+                      label="Fixed variant"
+                      value={offer.fixedVariantId}
+                      onChange={(e) =>
+                        setOffers((prev) =>
+                          prev.map((o, i) => (i === index ? { ...o, fixedVariantId: e.currentTarget.value } : o)),
+                        )
+                      }
+                    >
+                      <s-option value="">Select a variant…</s-option>
+                      {(offer.selections[0].variants ?? []).map((v) => (
+                        <s-option key={v.id} value={v.id}>
+                          {v.title}
+                        </s-option>
+                      ))}
+                    </s-select>
+                  ))}
                 {offers.length > 1 && (
                   <s-button variant="tertiary" tone="critical" onClick={() => removeOfferSlot(index)}>
                     Remove this slot
@@ -373,6 +434,22 @@ export default function RuleEditor() {
               onChange={(e) => setDiscountValue(Number(e.currentTarget.value))}
             />
           )}
+        </s-stack>
+      </s-section>
+
+      <s-section heading="Schedule" slot="aside">
+        <s-paragraph>Leave blank for no start/end limit.</s-paragraph>
+        <s-stack direction="block" gap="base">
+          <s-date-field
+            label="Starts"
+            value={startAt}
+            onChange={(e) => setStartAt(e.currentTarget.value)}
+          />
+          <s-date-field
+            label="Ends"
+            value={endAt}
+            onChange={(e) => setEndAt(e.currentTarget.value)}
+          />
         </s-stack>
       </s-section>
 

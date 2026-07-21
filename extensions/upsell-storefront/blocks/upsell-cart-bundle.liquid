@@ -1,10 +1,10 @@
 {{ 'upsell.css' | asset_url | stylesheet_tag }}
 <div id="upsell-cart-bundle-root" class="upsell-cart-bundle-root" {{ block.shopify_attributes }}></div>
-{{ 'upsell.js' | asset_url | script_tag }}
+<script src="{{ 'upsell.js' | asset_url }}" defer="defer"></script>
 
 {% schema %}
 {
-  "name": "Upsell cart bundle (Tool B)",
+  "name": "Upsell cart bundle",
   "target": "section",
   "templates": ["cart"]
 }

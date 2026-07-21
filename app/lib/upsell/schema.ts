@@ -13,7 +13,7 @@ export const offerInputSchema = z.object({
   targetType: targetTypeSchema,
   targetIds: z.array(z.string().min(1)).min(1, "Pick at least one product or collection"),
   variantOptionMode: variantOptionModeSchema.default("INDEPENDENT"),
-  fixedVariantId: z.string().optional(),
+  fixedVariantId: z.string().nullable().optional(),
   sortOrder: z.number().int().default(0),
 });
 

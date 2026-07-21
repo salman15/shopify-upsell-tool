@@ -1,10 +1,10 @@
 {{ 'upsell.css' | asset_url | stylesheet_tag }}
 <div id="upsell-popup-root"></div>
-{{ 'upsell.js' | asset_url | script_tag }}
+<script src="{{ 'upsell.js' | asset_url }}" defer="defer"></script>
 
 {% schema %}
 {
-  "name": "Upsell popup (Tool A)",
+  "name": "Upsell popup",
   "target": "body"
 }
 {% endschema %}
