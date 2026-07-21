@@ -76,7 +76,8 @@ export default function RulesIndex() {
                     <s-checkbox
                       label=""
                       {...(rule.enabled ? { checked: true } : {})}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        if (!event.currentTarget) return;
                         fetcher.submit(
                           {
                             intent: "toggle",
@@ -84,8 +85,8 @@ export default function RulesIndex() {
                             enabled: String(event.currentTarget.checked),
                           },
                           { method: "post" },
-                        )
-                      }
+                        );
+                      }}
                     />
                   </s-table-cell>
                   <s-table-cell>

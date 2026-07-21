@@ -283,14 +283,14 @@ export default function RuleEditor() {
             label="Internal name"
             name="name"
             value={name}
-            onChange={(e) => setName(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setName(e.currentTarget.value); }}
             details="Only visible to you, in this list — not shown to customers."
           />
           <s-select
             label="Tool type"
             name="toolType"
             value={toolType}
-            onChange={(e) => setToolType(e.currentTarget.value as ToolType)}
+            onChange={(e) => { if (e.currentTarget) setToolType(e.currentTarget.value as ToolType); }}
           >
             <s-option value="POPUP">A — Post-add-to-cart popup</s-option>
             <s-option value="CART_BUNDLE">B — Cart page bundle builder</s-option>
@@ -299,7 +299,7 @@ export default function RuleEditor() {
             label="Priority"
             name="priority"
             value={String(priority)}
-            onChange={(e) => setPriority(Number(e.currentTarget.value))}
+            onChange={(e) => { if (e.currentTarget) setPriority(Number(e.currentTarget.value)); }}
             details="Higher priority rules win when more than one rule matches the same trigger."
           />
         </s-stack>
@@ -312,6 +312,7 @@ export default function RuleEditor() {
             name="triggerType"
             value={triggerType}
             onChange={(e) => {
+              if (!e.currentTarget) return;
               setTriggerType(e.currentTarget.value as TargetType);
               setTriggerSelections([]);
             }}
@@ -343,13 +344,13 @@ export default function RuleEditor() {
                 <s-select
                   label="Offer type"
                   value={offer.targetType}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (!e.currentTarget) return;
+                    const value = e.currentTarget.value as TargetType;
                     setOffers((prev) =>
-                      prev.map((o, i) =>
-                        i === index ? { ...o, targetType: e.currentTarget.value as TargetType, selections: [] } : o,
-                      ),
-                    )
-                  }
+                      prev.map((o, i) => (i === index ? { ...o, targetType: value, selections: [] } : o)),
+                    );
+                  }}
                 >
                   <s-option value="PRODUCT">Specific products</s-option>
                   <s-option value="COLLECTION">A collection</s-option>
@@ -366,13 +367,13 @@ export default function RuleEditor() {
                   <s-select
                     label="Variant selection"
                     value={offer.variantOptionMode}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (!e.currentTarget) return;
+                      const value = e.currentTarget.value as VariantOptionMode;
                       setOffers((prev) =>
-                        prev.map((o, i) =>
-                          i === index ? { ...o, variantOptionMode: e.currentTarget.value as VariantOptionMode } : o,
-                        ),
-                      )
-                    }
+                        prev.map((o, i) => (i === index ? { ...o, variantOptionMode: value } : o)),
+                      );
+                    }}
                   >
                     <s-option value="INDEPENDENT">Independent — customer picks freely</s-option>
                     <s-option value="MIRRORED">Mirrored — default to anchor&apos;s option</s-option>
@@ -390,11 +391,13 @@ export default function RuleEditor() {
                     <s-select
                       label="Fixed variant"
                       value={offer.fixedVariantId}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        if (!e.currentTarget) return;
+                        const value = e.currentTarget.value;
                         setOffers((prev) =>
-                          prev.map((o, i) => (i === index ? { ...o, fixedVariantId: e.currentTarget.value } : o)),
-                        )
-                      }
+                          prev.map((o, i) => (i === index ? { ...o, fixedVariantId: value } : o)),
+                        );
+                      }}
                     >
                       <s-option value="">Select a variant…</s-option>
                       {(offer.selections[0].variants ?? []).map((v) => (
@@ -421,7 +424,7 @@ export default function RuleEditor() {
           <s-select
             label="Discount mode"
             value={discountMode}
-            onChange={(e) => setDiscountMode(e.currentTarget.value as DiscountMode)}
+            onChange={(e) => { if (e.currentTarget) setDiscountMode(e.currentTarget.value as DiscountMode); }}
           >
             <s-option value="FREE">Free</s-option>
             <s-option value="PERCENTAGE">Percentage off</s-option>
@@ -431,7 +434,7 @@ export default function RuleEditor() {
             <s-number-field
               label={discountMode === "PERCENTAGE" ? "Percent off" : "Amount off"}
               value={String(discountValue)}
-              onChange={(e) => setDiscountValue(Number(e.currentTarget.value))}
+              onChange={(e) => { if (e.currentTarget) setDiscountValue(Number(e.currentTarget.value)); }}
             />
           )}
         </s-stack>
@@ -443,12 +446,12 @@ export default function RuleEditor() {
           <s-date-field
             label="Starts"
             value={startAt}
-            onChange={(e) => setStartAt(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setStartAt(e.currentTarget.value); }}
           />
           <s-date-field
             label="Ends"
             value={endAt}
-            onChange={(e) => setEndAt(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setEndAt(e.currentTarget.value); }}
           />
         </s-stack>
       </s-section>
@@ -458,27 +461,27 @@ export default function RuleEditor() {
           <s-text-field
             label="Headline"
             value={headline}
-            onChange={(e) => setHeadline(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setHeadline(e.currentTarget.value); }}
           />
           <s-text-field
             label="Subheading"
             value={subheading}
-            onChange={(e) => setSubheading(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setSubheading(e.currentTarget.value); }}
           />
           <s-text-field
             label="Button text"
             value={buttonText}
-            onChange={(e) => setButtonText(e.currentTarget.value)}
+            onChange={(e) => { if (e.currentTarget) setButtonText(e.currentTarget.value); }}
           />
           <s-number-field
             label="Max times shown per session (0 = unlimited)"
             value={String(maxImpressions)}
-            onChange={(e) => setMaxImpressions(Number(e.currentTarget.value))}
+            onChange={(e) => { if (e.currentTarget) setMaxImpressions(Number(e.currentTarget.value)); }}
           />
           <s-checkbox
             label="Hide if offer item is already in cart"
             {...(hideIfInCart ? { checked: true } : {})}
-            onChange={(e) => setHideIfInCart(e.currentTarget.checked)}
+            onChange={(e) => { if (e.currentTarget) setHideIfInCart(e.currentTarget.checked); }}
           />
         </s-stack>
       </s-section>

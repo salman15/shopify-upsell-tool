@@ -76,8 +76,13 @@
   flex: 1;
 }
 
-.upsell-add-btn,
-.upsell-bundle-add-btn {
+.upsell-error {
+  color: #c0392b;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.upsell-add-btn {
   width: 100%;
   padding: 12px;
   border: none;
@@ -88,8 +93,7 @@
   cursor: pointer;
 }
 
-.upsell-add-btn:disabled,
-.upsell-bundle-add-btn:disabled {
+.upsell-add-btn:disabled {
   opacity: 0.6;
   cursor: default;
 }
@@ -116,36 +120,83 @@
   color: #555;
 }
 
-.upsell-bundle-slots {
+.upsell-carousel-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 4px;
 }
 
-.upsell-bundle-slot {
+.upsell-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.upsell-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.upsell-carousel-arrow {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  padding: 4px;
+}
+
+.upsell-carousel-card {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: 140px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  width: 96px;
+  text-align: center;
+  background: #fafafa;
 }
 
-.upsell-bundle-slot img {
-  width: 64px;
-  height: 64px;
+.upsell-carousel-card img {
+  width: 72px;
+  height: 72px;
   object-fit: cover;
   border-radius: 4px;
 }
 
-.upsell-bundle-slot-title {
-  font-size: 12px;
-  text-align: center;
+.upsell-carousel-card-title {
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.upsell-bundle-slot-select {
+.upsell-carousel-card-price {
+  font-size: 13px;
+  color: #555;
+}
+
+.upsell-carousel-add-btn {
   width: 100%;
-  font-size: 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.upsell-carousel-add-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -169,8 +220,17 @@
   }
 
   .upsell-add-btn,
-  .upsell-bundle-add-btn {
+  .upsell-carousel-add-btn {
     background: #f2f2f2;
     color: #1a1a1a;
+  }
+
+  .upsell-carousel-card {
+    background: #262626;
+    border-color: #444;
+  }
+
+  .upsell-carousel-card-price {
+    color: #aaa;
   }
 }

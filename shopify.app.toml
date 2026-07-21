@@ -14,7 +14,10 @@ api_version = "2026-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products"
+# read_products: Admin API access, used by the rule editor's resource picker labels.
+# unauthenticated_read_*: Storefront API access, used by the App Proxy to resolve
+# live product/variant/price/collection data for active rules.
+scopes = "read_products,unauthenticated_read_product_listings,unauthenticated_read_collection_listings"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
