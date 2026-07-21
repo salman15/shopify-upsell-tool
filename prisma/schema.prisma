@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+enum ToolType {
+  POPUP
+  CART_BUNDLE
+}
+
+enum TargetType {
+  PRODUCT
+  COLLECTION
+}
+
+enum DiscountMode {
+  FREE
+  PERCENTAGE
+  FIXED
+}
+
+enum VariantOptionMode {
+  INDEPENDENT
+  MIRRORED
+  FIXED
+}
+
+// Per-shop master kill switches, independent of individual rule toggles.
+model ToolSettings {
+  id                String   @id @default(cuid())
+  shop              String   @unique
+  popupEnabled      Boolean  @default(true)
+  cartBundleEnabled Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+}
+
+model UpsellRule {
+  id       String   @id @default(cuid())
+  shop     String
+  toolType ToolType
+  enabled  Boolean  @default(true)
+  name     String
+  priority Int      @default(0)
+
+  triggerType TargetType
+  // JSON-encoded array of Shopify GIDs (products or collections, per triggerType)
+  triggerIds  String
+
+  discountMode  DiscountMode @default(FREE)
+  discountValue Float        @default(0)
+
+  maxImpressionsPerSession Int     @default(0) // 0 = unlimited
+  hideIfOfferAlreadyInCart Boolean @default(true)
+  placement                String  @default("default")
+  headline                 String?
+  subheading               String?
+  buttonText                String?
+
+  startAt DateTime?
+  endAt   DateTime?
+
+  offers UpsellOffer[]
+  events UpsellEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shop])
+  @@index([shop, enabled])
+}
+
+// One rule can offer multiple product/collection slots (e.g. Tool B's bundle components).
+model UpsellOffer {
+  id     String     @id @default(cuid())
+  ruleId String
+  rule   UpsellRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  targetType TargetType
+  // JSON-encoded array of Shopify GIDs (products or collections, per targetType)
+  targetIds  String
+
+  variantOptionMode VariantOptionMode @default(INDEPENDENT)
+  // Only used when variantOptionMode is FIXED: the pinned variant GID
+  fixedVariantId    String?
+  sortOrder         Int               @default(0)
+
+  @@index([ruleId])
+}
+
+// Impression/conversion tracking per rule, for the future analytics dashboard.
+model UpsellEvent {
+  id     String     @id @default(cuid())
+  ruleId String
+  rule   UpsellRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  shop      String
+  type      String // "shown" | "accepted" | "dismissed"
+  cartToken String?
+  createdAt DateTime @default(now())
+
+  @@index([ruleId])
+  @@index([shop, createdAt])
+}
