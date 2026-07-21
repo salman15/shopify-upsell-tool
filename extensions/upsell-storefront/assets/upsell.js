@@ -142,14 +142,15 @@
   }
 
   function pickMatchingRule(rules, addedProductIds) {
+    // Shows every time the trigger product is added — the only gates are the
+    // merchant-configured impression cap (0 = unlimited, the default) and
+    // "hide if offer already in cart" (checked in maybeShowPopup), not a
+    // one-time-only session flag.
     var matches = rules
       .filter(function (r) {
         return r.triggerProductIds.some(function (id) {
           return addedProductIds.indexOf(id) !== -1;
         });
-      })
-      .filter(function (r) {
-        return !alreadyAccepted(r.id);
       })
       .filter(function (r) {
         return r.display.maxImpressionsPerSession === 0 || timesShown(r.id) < r.display.maxImpressionsPerSession;
@@ -430,9 +431,12 @@
 
     if (cards.length === 0) return;
 
+    var isFloating = root.classList.contains("upsell-floating");
+
     var box = document.createElement("div");
     box.className = "upsell-bundle-box";
     box.innerHTML =
+      (isFloating ? '<button type="button" class="upsell-close" aria-label="Close">&times;</button>' : "") +
       (rule.display.headline ? '<h3 class="upsell-bundle-headline"></h3>' : "") +
       (rule.display.subheading ? '<p class="upsell-bundle-subheading"></p>' : "") +
       '<div class="upsell-carousel-wrap">' +
@@ -443,6 +447,12 @@
 
     if (rule.display.headline) box.querySelector(".upsell-bundle-headline").textContent = rule.display.headline;
     if (rule.display.subheading) box.querySelector(".upsell-bundle-subheading").textContent = rule.display.subheading;
+
+    if (isFloating) {
+      box.querySelector(".upsell-close").addEventListener("click", function () {
+        box.remove();
+      });
+    }
 
     var track = box.querySelector(".upsell-carousel");
 
@@ -512,7 +522,17 @@
     var popupRoot = document.getElementById(POPUP_ROOT_ID);
     if (popupRoot) initPopup(popupRoot);
 
+    // If no theme section placed the cart-bundle block (many themes' cart
+    // drawer sections don't support app blocks at all — Dawn's included),
+    // fall back to a floating panel synthesized by the popup's global embed
+    // script, so Tool B still reaches customers regardless of theme support.
     var cartRoot = document.getElementById(CART_BUNDLE_ROOT_ID);
+    if (!cartRoot && popupRoot) {
+      cartRoot = document.createElement("div");
+      cartRoot.id = CART_BUNDLE_ROOT_ID;
+      cartRoot.className = "upsell-cart-bundle-root upsell-floating";
+      document.body.appendChild(cartRoot);
+    }
     if (cartRoot) initCartBundle(cartRoot);
   });
 })();

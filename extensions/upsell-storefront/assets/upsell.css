@@ -105,9 +105,33 @@
 }
 
 .upsell-bundle-box {
+  position: relative;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 16px;
+}
+
+/* Fallback panel synthesized when no theme section could host the block
+   (e.g. a cart-drawer section with no app-block support). Fixed to the
+   corner of the viewport instead of being inline in the theme's markup. */
+.upsell-floating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(320px, calc(100vw - 32px));
+  z-index: 9998;
+}
+
+.upsell-floating .upsell-bundle-box {
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  padding-right: 36px;
+}
+
+.upsell-floating .upsell-close {
+  top: 8px;
+  right: 8px;
+  font-size: 20px;
 }
 
 .upsell-bundle-headline {
@@ -223,6 +247,11 @@
   .upsell-carousel-add-btn {
     background: #f2f2f2;
     color: #1a1a1a;
+  }
+
+  .upsell-floating .upsell-bundle-box {
+    background: #1e1e1e;
+    color: #f2f2f2;
   }
 
   .upsell-carousel-card {
