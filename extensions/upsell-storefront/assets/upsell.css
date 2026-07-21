@@ -1,0 +1,176 @@
+.upsell-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.upsell-modal {
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.upsell-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+.upsell-headline {
+  margin: 0 32px 4px 0;
+  font-size: 20px;
+}
+
+.upsell-subheading {
+  margin: 0 0 16px;
+  color: #555;
+}
+
+.upsell-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.upsell-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.upsell-option:has(input:checked) {
+  border-color: #1a1a1a;
+}
+
+.upsell-option img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.upsell-option-title {
+  flex: 1;
+}
+
+.upsell-add-btn,
+.upsell-bundle-add-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.upsell-add-btn:disabled,
+.upsell-bundle-add-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.upsell-cart-bundle-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upsell-bundle-box {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.upsell-bundle-headline {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.upsell-bundle-subheading {
+  margin: 0 0 12px;
+  color: #555;
+}
+
+.upsell-bundle-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.upsell-bundle-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 96px;
+}
+
+.upsell-bundle-slot img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.upsell-bundle-slot-title {
+  font-size: 12px;
+  text-align: center;
+}
+
+.upsell-bundle-slot-select {
+  width: 100%;
+  font-size: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .upsell-modal {
+    background: #1e1e1e;
+    color: #f2f2f2;
+  }
+
+  .upsell-subheading,
+  .upsell-bundle-subheading {
+    color: #aaa;
+  }
+
+  .upsell-option,
+  .upsell-bundle-box {
+    border-color: #444;
+  }
+
+  .upsell-option:has(input:checked) {
+    border-color: #f2f2f2;
+  }
+
+  .upsell-add-btn,
+  .upsell-bundle-add-btn {
+    background: #f2f2f2;
+    color: #1a1a1a;
+  }
+}
