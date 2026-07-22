@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
@@ -7,10 +7,20 @@ import { createRule, getRule, updateRule } from "../lib/upsell/rules.server";
 import { syncDiscountMetafield } from "../lib/upsell/discount.server";
 import { ruleInputSchema } from "../lib/upsell/schema";
 import { log } from "../lib/logger.server";
+import { DiscountFields } from "../components/rules/DiscountFields";
+import { DisplayFields } from "../components/rules/DisplayFields";
+import { OfferEditor } from "../components/rules/OfferEditor";
+import { RulePreview } from "../components/rules/RulePreview";
+import type {
+  BorderRadius,
+  DiscountMode,
+  OfferState,
+  Selection,
+  TargetType,
+  ToolType,
+} from "../components/rules/types";
 
-type VariantOption = { id: string; title: string };
-type ResourceLabel = { title: string; image: string | null; variants?: VariantOption[] };
-type Selection = { id: string; title: string; image: string | null; variants?: VariantOption[] };
+type ResourceLabel = { title: string; image: string | null; variants?: { id: string; title: string }[] };
 
 const RESOURCE_QUERY = `#graphql
   query UpsellResourceLabels($ids: [ID!]!) {
@@ -104,18 +114,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   return { ok: true, id };
 };
 
-type ToolType = "POPUP" | "CART_BUNDLE";
-type TargetType = "PRODUCT" | "COLLECTION";
-type DiscountMode = "FREE" | "PERCENTAGE" | "FIXED";
-type VariantOptionMode = "INDEPENDENT" | "MIRRORED" | "FIXED";
-
-type OfferState = {
-  targetType: TargetType;
-  selections: Selection[];
-  variantOptionMode: VariantOptionMode;
-  fixedVariantId: string;
-};
-
 export default function RuleEditor() {
   const { rule, labels } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -143,6 +141,14 @@ export default function RuleEditor() {
   const [headline, setHeadline] = useState(rule?.headline ?? "");
   const [subheading, setSubheading] = useState(rule?.subheading ?? "");
   const [buttonText, setButtonText] = useState(rule?.buttonText ?? "");
+  const [backgroundColor, setBackgroundColor] = useState(rule?.backgroundColor ?? "#ffffff");
+  const [textColor, setTextColor] = useState(rule?.textColor ?? "#1a1a1a");
+  const [buttonColor, setButtonColor] = useState(rule?.buttonColor ?? "#1a1a1a");
+  const [buttonTextColor, setButtonTextColor] = useState(rule?.buttonTextColor ?? "#ffffff");
+  const [borderRadius, setBorderRadius] = useState<BorderRadius>(
+    (rule?.borderRadius as BorderRadius | null) ?? "medium",
+  );
+  const [fontFamily, setFontFamily] = useState(rule?.fontFamily ?? "");
 
   const [offers, setOffers] = useState<OfferState[]>(
     rule?.offers.map((offer) => ({
@@ -164,6 +170,20 @@ export default function RuleEditor() {
 
   const isSaving = fetcher.state === "submitting";
   const errors = fetcher.data && "errors" in fetcher.data ? fetcher.data.errors : null;
+
+  // Without this, a successful create left the form sitting on /app/rules/new
+  // with no visible confirmation — clicking Save again (easy to do when
+  // nothing seems to have happened) silently created another duplicate rule
+  // instead of erroring or updating the existing one.
+  useEffect(() => {
+    if (!fetcher.data || !("ok" in fetcher.data) || !fetcher.data.ok) return;
+    if (!rule) {
+      navigate(`/app/rules/${fetcher.data.id}`, { replace: true });
+    } else {
+      shopify.toast.show("Rule saved");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetcher.data]);
 
   const pickTrigger = async () => {
     const resourceType = triggerType === "PRODUCT" ? "product" : "collection";
@@ -249,6 +269,12 @@ export default function RuleEditor() {
       headline: headline || null,
       subheading: subheading || null,
       buttonText: buttonText || null,
+      backgroundColor: backgroundColor || null,
+      textColor: textColor || null,
+      buttonColor: buttonColor || null,
+      buttonTextColor: buttonTextColor || null,
+      borderRadius: borderRadius || null,
+      fontFamily: fontFamily || null,
       startAt: startAt ? new Date(`${startAt}T00:00:00.000Z`).toISOString() : "",
       endAt: endAt ? new Date(`${endAt}T00:00:00.000Z`).toISOString() : "",
       offers: offers.map((o, i) => ({
@@ -339,105 +365,37 @@ export default function RuleEditor() {
         </s-paragraph>
         <s-stack direction="block" gap="large">
           {offers.map((offer, index) => (
-            <s-box key={index} padding="base" borderWidth="base" borderRadius="base">
-              <s-stack direction="block" gap="base">
-                <s-select
-                  label="Offer type"
-                  value={offer.targetType}
-                  onChange={(e) => {
-                    if (!e.currentTarget) return;
-                    const value = e.currentTarget.value as TargetType;
-                    setOffers((prev) =>
-                      prev.map((o, i) => (i === index ? { ...o, targetType: value, selections: [] } : o)),
-                    );
-                  }}
-                >
-                  <s-option value="PRODUCT">Specific products</s-option>
-                  <s-option value="COLLECTION">A collection</s-option>
-                </s-select>
-                <s-button onClick={() => pickOffer(index)}>
-                  {offer.targetType === "PRODUCT" ? "Pick products" : "Pick collection"}
-                </s-button>
-                <s-stack direction="inline" gap="small">
-                  {offer.selections.map((s) => (
-                    <s-badge key={s.id}>{s.title}</s-badge>
-                  ))}
-                </s-stack>
-                {toolType === "CART_BUNDLE" && (
-                  <s-select
-                    label="Variant selection"
-                    value={offer.variantOptionMode}
-                    onChange={(e) => {
-                      if (!e.currentTarget) return;
-                      const value = e.currentTarget.value as VariantOptionMode;
-                      setOffers((prev) =>
-                        prev.map((o, i) => (i === index ? { ...o, variantOptionMode: value } : o)),
-                      );
-                    }}
-                  >
-                    <s-option value="INDEPENDENT">Independent — customer picks freely</s-option>
-                    <s-option value="MIRRORED">Mirrored — default to anchor&apos;s option</s-option>
-                    <s-option value="FIXED">Fixed — always the same variant</s-option>
-                  </s-select>
-                )}
-                {toolType === "CART_BUNDLE" &&
-                  offer.variantOptionMode === "FIXED" &&
-                  (offer.targetType !== "PRODUCT" || offer.selections.length !== 1 ? (
-                    <s-paragraph>
-                      Fixed mode needs exactly one product picked above (not a collection) so
-                      there&apos;s a single variant list to choose from.
-                    </s-paragraph>
-                  ) : (
-                    <s-select
-                      label="Fixed variant"
-                      value={offer.fixedVariantId}
-                      onChange={(e) => {
-                        if (!e.currentTarget) return;
-                        const value = e.currentTarget.value;
-                        setOffers((prev) =>
-                          prev.map((o, i) => (i === index ? { ...o, fixedVariantId: value } : o)),
-                        );
-                      }}
-                    >
-                      <s-option value="">Select a variant…</s-option>
-                      {(offer.selections[0].variants ?? []).map((v) => (
-                        <s-option key={v.id} value={v.id}>
-                          {v.title}
-                        </s-option>
-                      ))}
-                    </s-select>
-                  ))}
-                {offers.length > 1 && (
-                  <s-button variant="tertiary" tone="critical" onClick={() => removeOfferSlot(index)}>
-                    Remove this slot
-                  </s-button>
-                )}
-              </s-stack>
-            </s-box>
+            <OfferEditor
+              key={index}
+              toolType={toolType}
+              offer={offer}
+              canRemove={offers.length > 1}
+              onTargetTypeChange={(value) => {
+                setOffers((prev) =>
+                  prev.map((o, i) => (i === index ? { ...o, targetType: value, selections: [] } : o)),
+                );
+              }}
+              onPick={() => pickOffer(index)}
+              onVariantModeChange={(value) => {
+                setOffers((prev) => prev.map((o, i) => (i === index ? { ...o, variantOptionMode: value } : o)));
+              }}
+              onFixedVariantChange={(value) => {
+                setOffers((prev) => prev.map((o, i) => (i === index ? { ...o, fixedVariantId: value } : o)));
+              }}
+              onRemove={() => removeOfferSlot(index)}
+            />
           ))}
           <s-button onClick={addOfferSlot}>Add another offer slot</s-button>
         </s-stack>
       </s-section>
 
       <s-section heading="Discount">
-        <s-stack direction="block" gap="base">
-          <s-select
-            label="Discount mode"
-            value={discountMode}
-            onChange={(e) => { if (e.currentTarget) setDiscountMode(e.currentTarget.value as DiscountMode); }}
-          >
-            <s-option value="FREE">Free</s-option>
-            <s-option value="PERCENTAGE">Percentage off</s-option>
-            <s-option value="FIXED">Fixed amount off</s-option>
-          </s-select>
-          {discountMode !== "FREE" && (
-            <s-number-field
-              label={discountMode === "PERCENTAGE" ? "Percent off" : "Amount off"}
-              value={String(discountValue)}
-              onChange={(e) => { if (e.currentTarget) setDiscountValue(Number(e.currentTarget.value)); }}
-            />
-          )}
-        </s-stack>
+        <DiscountFields
+          discountMode={discountMode}
+          discountValue={discountValue}
+          onDiscountModeChange={setDiscountMode}
+          onDiscountValueChange={setDiscountValue}
+        />
       </s-section>
 
       <s-section heading="Schedule" slot="aside">
@@ -457,33 +415,50 @@ export default function RuleEditor() {
       </s-section>
 
       <s-section heading="Display" slot="aside">
-        <s-stack direction="block" gap="base">
-          <s-text-field
-            label="Headline"
-            value={headline}
-            onChange={(e) => { if (e.currentTarget) setHeadline(e.currentTarget.value); }}
-          />
-          <s-text-field
-            label="Subheading"
-            value={subheading}
-            onChange={(e) => { if (e.currentTarget) setSubheading(e.currentTarget.value); }}
-          />
-          <s-text-field
-            label="Button text"
-            value={buttonText}
-            onChange={(e) => { if (e.currentTarget) setButtonText(e.currentTarget.value); }}
-          />
-          <s-number-field
-            label="Max times shown per session (0 = unlimited)"
-            value={String(maxImpressions)}
-            onChange={(e) => { if (e.currentTarget) setMaxImpressions(Number(e.currentTarget.value)); }}
-          />
-          <s-checkbox
-            label="Hide if offer item is already in cart"
-            {...(hideIfInCart ? { checked: true } : {})}
-            onChange={(e) => { if (e.currentTarget) setHideIfInCart(e.currentTarget.checked); }}
-          />
-        </s-stack>
+        <DisplayFields
+          headline={headline}
+          subheading={subheading}
+          buttonText={buttonText}
+          backgroundColor={backgroundColor}
+          textColor={textColor}
+          buttonColor={buttonColor}
+          buttonTextColor={buttonTextColor}
+          borderRadius={borderRadius}
+          fontFamily={fontFamily}
+          maxImpressions={maxImpressions}
+          hideIfInCart={hideIfInCart}
+          onHeadlineChange={setHeadline}
+          onSubheadingChange={setSubheading}
+          onButtonTextChange={setButtonText}
+          onBackgroundColorChange={setBackgroundColor}
+          onTextColorChange={setTextColor}
+          onButtonColorChange={setButtonColor}
+          onButtonTextColorChange={setButtonTextColor}
+          onBorderRadiusChange={setBorderRadius}
+          onFontFamilyChange={setFontFamily}
+          onMaxImpressionsChange={setMaxImpressions}
+          onHideIfInCartChange={setHideIfInCart}
+        />
+      </s-section>
+
+      <s-section heading="Preview" slot="aside">
+        <s-paragraph>
+          Approximate — the real popup/cart module also inherits a few base
+          styles from your theme.
+        </s-paragraph>
+        <RulePreview
+          backgroundColor={backgroundColor}
+          textColor={textColor}
+          fontFamily={fontFamily}
+          borderRadius={borderRadius}
+          headline={headline}
+          subheading={subheading}
+          discountMode={discountMode}
+          discountValue={discountValue}
+          buttonColor={buttonColor}
+          buttonTextColor={buttonTextColor}
+          buttonText={buttonText}
+        />
       </s-section>
     </s-page>
   );

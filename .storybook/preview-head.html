@@ -1,0 +1,12 @@
+<!--
+  Mirrors app/root.tsx + the AppProvider component from
+  @shopify/shopify-app-react-router/react: the `<s-*>` elements used
+  throughout the rule editor (s-page, s-select, s-color-field, etc.) are
+  custom elements defined by this remote script, not a local component
+  library — without it they render as unstyled, non-interactive generic
+  elements in the Storybook preview, same as they would in a real browser
+  that hadn't loaded it.
+-->
+<link rel="preconnect" href="https://cdn.shopify.com/" />
+<link rel="stylesheet" href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css" />
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>

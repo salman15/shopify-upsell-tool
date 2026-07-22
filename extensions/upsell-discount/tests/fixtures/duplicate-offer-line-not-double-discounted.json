@@ -24,6 +24,15 @@
             "attribute": null,
             "merchandise": {
               "__typename": "ProductVariant",
+              "id": "gid://shopify/ProductVariant/1",
+              "product": { "id": "gid://shopify/Product/1" }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/3",
+            "attribute": null,
+            "merchandise": {
+              "__typename": "ProductVariant",
               "id": "gid://shopify/ProductVariant/2",
               "product": { "id": "gid://shopify/Product/2" }
             }

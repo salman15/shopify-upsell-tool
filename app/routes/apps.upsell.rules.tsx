@@ -60,6 +60,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           headline: rule.headline,
           subheading: rule.subheading,
           buttonText: rule.buttonText,
+          backgroundColor: rule.backgroundColor,
+          textColor: rule.textColor,
+          buttonColor: rule.buttonColor,
+          buttonTextColor: rule.buttonTextColor,
+          borderRadius: rule.borderRadius,
+          fontFamily: rule.fontFamily,
         },
         offers,
       };

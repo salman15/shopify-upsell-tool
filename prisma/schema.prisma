@@ -88,6 +88,15 @@ model UpsellRule {
   headline                 String?
   subheading               String?
   buttonText                String?
+  // Hex colors, e.g. "#ffffff". Null means use the storefront extension's default.
+  backgroundColor          String?
+  textColor                String?
+  buttonColor              String?
+  buttonTextColor          String?
+  // "none" | "small" | "medium" | "large" | "pill". Null means the default (medium).
+  borderRadius             String?
+  // Optional CSS font-family value, e.g. "Georgia, serif". Null means inherit the theme's font.
+  fontFamily               String?
 
   startAt DateTime?
   endAt   DateTime?

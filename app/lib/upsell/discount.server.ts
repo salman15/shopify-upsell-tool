@@ -9,7 +9,10 @@ const FUNCTION_HANDLE = "upsell-discount";
 
 type AdminContext = AdminApiContext;
 
-type DiscountConfiguration = Record<string, { mode: string; value: number }>;
+type DiscountConfiguration = Record<
+  string,
+  { mode: string; value: number; triggerProductIds: string[]; offerProductIds: string[] }
+>;
 
 function withinSchedule(rule: { startAt: Date | null; endAt: Date | null }, now: Date) {
   if (rule.startAt && now < rule.startAt) return false;
@@ -17,11 +20,57 @@ function withinSchedule(rule: { startAt: Date | null; endAt: Date | null }, now:
   return true;
 }
 
-// Rebuilds the { ruleId: { mode, value } } map the Function reads at checkout
-// time. Only rules that are enabled, in-schedule, and whose tool is globally
-// on are included — so disabling a rule (or the whole tool) stops the
-// discount immediately, even for a line already sitting in an existing cart.
-export async function buildDiscountConfiguration(shop: string): Promise<DiscountConfiguration> {
+// Product-type targets are already a list of product GIDs; collection-type
+// targets are expanded to their current member product GIDs here, since the
+// checkout-time Function can't run arbitrary collection-membership queries
+// (its input query is fixed at build time, not parameterizable per rule).
+// This is a point-in-time snapshot — it goes stale only until the next rule
+// or settings change re-syncs it, which is an acceptable tradeoff. Shared by
+// both trigger resolution and offer-product resolution below.
+async function resolveProductIds(
+  admin: AdminContext,
+  targetType: string,
+  targetIds: string[],
+): Promise<string[]> {
+  if (targetType === "PRODUCT") return targetIds;
+
+  const ids = new Set<string>();
+  await Promise.all(
+    targetIds.map(async (collectionId) => {
+      const response = await admin.graphql(
+        `#graphql
+          query TargetCollectionProducts($id: ID!) {
+            collection(id: $id) {
+              products(first: 250) { nodes { id } }
+            }
+          }`,
+        { variables: { id: collectionId } },
+      );
+      const json = (await response.json()) as {
+        data?: { collection: { products: { nodes: { id: string }[] } } | null };
+      };
+      for (const node of json.data?.collection?.products.nodes ?? []) {
+        ids.add(node.id);
+      }
+    }),
+  );
+  return [...ids];
+}
+
+// Rebuilds the { ruleId: { mode, value, triggerProductIds, offerProductIds } }
+// map the Function reads at checkout time. Only rules that are enabled,
+// in-schedule, and whose tool is globally on are included — so disabling a
+// rule (or the whole tool) stops the discount immediately, even for a line
+// already sitting in an existing cart. triggerProductIds lets the Function
+// confirm the trigger product is *still* in the cart before discounting —
+// without it, removing the trigger after accepting a free/discounted offer
+// item would leave that item discounted with nothing bought. offerProductIds
+// lets the Function discount *any* qualifying cart line for this rule, not
+// only the one line our own storefront JS tagged when the offer was
+// accepted — a customer who separately adds the same product the normal way
+// still gets the "buy X get Y" discount on one unit of it, matching how a
+// native Shopify BOGO discount behaves.
+export async function buildDiscountConfiguration(admin: AdminContext, shop: string): Promise<DiscountConfiguration> {
   const [settings, rules] = await Promise.all([getToolSettings(shop), listRules(shop)]);
   const now = new Date();
 
@@ -29,7 +78,23 @@ export async function buildDiscountConfiguration(shop: string): Promise<Discount
   for (const rule of rules) {
     const toolEnabled = rule.toolType === "POPUP" ? settings.popupEnabled : settings.cartBundleEnabled;
     if (!rule.enabled || !toolEnabled || !withinSchedule(rule, now)) continue;
-    config[rule.id] = { mode: rule.discountMode, value: rule.discountValue };
+
+    const triggerProductIds = await resolveProductIds(admin, rule.triggerType, rule.triggerIds);
+
+    const offerIdSet = new Set<string>();
+    await Promise.all(
+      rule.offers.map(async (offer) => {
+        const ids = await resolveProductIds(admin, offer.targetType, offer.targetIds);
+        for (const id of ids) offerIdSet.add(id);
+      }),
+    );
+
+    config[rule.id] = {
+      mode: rule.discountMode,
+      value: rule.discountValue,
+      triggerProductIds,
+      offerProductIds: [...offerIdSet],
+    };
   }
   return config;
 }
@@ -48,7 +113,7 @@ export async function activateDiscount(admin: AdminContext, shop: string) {
   const settings = await getToolSettings(shop);
   if (settings.discountId) return settings.discountId;
 
-  const configuration = await buildDiscountConfiguration(shop);
+  const configuration = await buildDiscountConfiguration(admin, shop);
 
   const data = (await graphqlOrThrow(
     admin,
@@ -103,7 +168,7 @@ export async function syncDiscountMetafield(admin: AdminContext, shop: string) {
   const settings = await getToolSettings(shop);
   if (!settings.discountId) return;
 
-  const configuration = await buildDiscountConfiguration(shop);
+  const configuration = await buildDiscountConfiguration(admin, shop);
 
   const data = (await graphqlOrThrow(
     admin,

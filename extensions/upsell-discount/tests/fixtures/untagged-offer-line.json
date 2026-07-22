@@ -12,7 +12,7 @@
         "lines": [
           {
             "id": "gid://shopify/CartLine/1",
-            "attribute": { "value": "rule_1" },
+            "attribute": null,
             "merchandise": {
               "__typename": "ProductVariant",
               "id": "gid://shopify/ProductVariant/1",

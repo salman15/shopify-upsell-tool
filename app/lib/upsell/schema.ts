@@ -8,6 +8,13 @@ export const variantOptionModeSchema = z.enum([
   "MIRRORED",
   "FIXED",
 ]);
+export const borderRadiusSchema = z.enum(["none", "small", "medium", "large", "pill"]);
+
+const hexColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color, e.g. #ffffff")
+  .nullable()
+  .optional();
 
 export const offerInputSchema = z.object({
   targetType: targetTypeSchema,
@@ -36,6 +43,12 @@ export const ruleInputSchema = z
     headline: z.string().nullable().optional(),
     subheading: z.string().nullable().optional(),
     buttonText: z.string().nullable().optional(),
+    backgroundColor: hexColorSchema,
+    textColor: hexColorSchema,
+    buttonColor: hexColorSchema,
+    buttonTextColor: hexColorSchema,
+    borderRadius: borderRadiusSchema.nullable().optional(),
+    fontFamily: z.string().nullable().optional(),
 
     startAt: z.string().datetime().optional().or(z.literal("")),
     endAt: z.string().datetime().optional().or(z.literal("")),

@@ -9,9 +9,13 @@
   padding: 16px;
 }
 
-.upsell-modal {
+.upsell-modal,
+.upsell-bundle-box {
   background: #fff;
   color: #1a1a1a;
+}
+
+.upsell-modal {
   border-radius: 8px;
   padding: 24px;
   max-width: 420px;
@@ -76,6 +80,37 @@
   flex: 1;
 }
 
+.upsell-option-price {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.upsell-price-original {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.upsell-price-final {
+  font-weight: 700;
+}
+
+.upsell-price-free {
+  color: #1e7e34;
+}
+
+.upsell-price-save {
+  background: #e6f4ea;
+  color: #1e7e34;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .upsell-error {
   color: #c0392b;
   font-size: 12px;
@@ -111,29 +146,6 @@
   padding: 16px;
 }
 
-/* Fallback panel synthesized when no theme section could host the block
-   (e.g. a cart-drawer section with no app-block support). Fixed to the
-   corner of the viewport instead of being inline in the theme's markup. */
-.upsell-floating {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: min(320px, calc(100vw - 32px));
-  z-index: 9998;
-}
-
-.upsell-floating .upsell-bundle-box {
-  background: #fff;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-  padding-right: 36px;
-}
-
-.upsell-floating .upsell-close {
-  top: 8px;
-  right: 8px;
-  font-size: 20px;
-}
-
 .upsell-bundle-headline {
   margin: 0 0 4px;
   font-size: 17px;
@@ -144,122 +156,146 @@
   color: #555;
 }
 
-.upsell-carousel-wrap {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.upsell-carousel {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-}
-
-.upsell-carousel::-webkit-scrollbar {
+/* Full custom cart drawer — synthesized when no theme section could host
+   the inline block (e.g. a cart-drawer section with no app-block support),
+   replacing the theme's own drawer rather than sitting as a separate modal
+   on top of it. */
+.upsell-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
   display: none;
 }
 
-.upsell-carousel-arrow {
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
+.upsell-drawer-overlay.upsell-drawer-open {
+  display: block;
 }
 
-.upsell-carousel-card {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  width: 140px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 12px;
+.upsell-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  background: #fff;
+  color: #1a1a1a;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  background: #fafafa;
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.2);
 }
 
-.upsell-carousel-card img {
-  width: 72px;
-  height: 72px;
+.upsell-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.upsell-drawer-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.upsell-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.upsell-drawer-bundle:empty {
+  display: none;
+}
+
+.upsell-drawer-bundle .upsell-bundle-box {
+  background: #f7f7f7;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.upsell-drawer-bundle .upsell-option {
+  background: #fff;
+}
+
+.upsell-drawer-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.upsell-drawer-line img {
+  width: 56px;
+  height: 56px;
   object-fit: cover;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
-.upsell-carousel-card-title {
-  font-size: 13px;
+.upsell-drawer-line-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upsell-drawer-line-title {
+  font-size: 14px;
   font-weight: 600;
 }
 
-.upsell-carousel-card-price {
-  font-size: 13px;
-  color: #555;
-}
-
-.upsell-carousel-add-btn {
-  width: 100%;
-  padding: 8px;
-  border: none;
-  border-radius: 999px;
-  background: #1a1a1a;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
+.upsell-drawer-line-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 4px;
 }
 
-.upsell-carousel-add-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
+.upsell-drawer-line-qty button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
 }
 
-@media (prefers-color-scheme: dark) {
-  .upsell-modal {
-    background: #1e1e1e;
-    color: #f2f2f2;
-  }
+.upsell-drawer-line-remove {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #999;
+  flex-shrink: 0;
+}
 
-  .upsell-subheading,
-  .upsell-bundle-subheading {
-    color: #aaa;
-  }
+.upsell-drawer-footer {
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
 
-  .upsell-option,
-  .upsell-bundle-box {
-    border-color: #444;
-  }
+.upsell-drawer-subtotal {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
 
-  .upsell-option:has(input:checked) {
-    border-color: #f2f2f2;
-  }
-
-  .upsell-add-btn,
-  .upsell-carousel-add-btn {
-    background: #f2f2f2;
-    color: #1a1a1a;
-  }
-
-  .upsell-floating .upsell-bundle-box {
-    background: #1e1e1e;
-    color: #f2f2f2;
-  }
-
-  .upsell-carousel-card {
-    background: #262626;
-    border-color: #444;
-  }
-
-  .upsell-carousel-card-price {
-    color: #aaa;
-  }
+.upsell-drawer-checkout-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  box-sizing: border-box;
 }
