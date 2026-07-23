@@ -9,22 +9,33 @@
   var U = window.UpsellCommon;
 
   function initPopup(root) {
+    U.debugLog("popup: initPopup() registered, root =", root);
     U.onCartAdd(function (cart, addedProductIds) {
+      U.debugLog("popup: onCartAdd fired with addedProductIds =", addedProductIds);
       U.getRules().then(function (data) {
-        if (!data.popupEnabled) return;
+        if (!data.popupEnabled) {
+          U.debugLog("popup: popupEnabled is false in ToolSettings — skipping");
+          return;
+        }
         var popupRules = data.rules.filter(function (r) {
           return r.toolType === "POPUP";
         });
+        U.debugLog("popup: " + popupRules.length + " POPUP rule(s) loaded", popupRules);
         var match = U.pickMatchingRule(popupRules, addedProductIds);
+        U.debugLog("popup: pickMatchingRule result =", match);
         if (match) maybeShowPopup(root, match);
       });
     });
   }
 
   function maybeShowPopup(root, rule) {
-    if (root.querySelector(".upsell-overlay")) return;
+    if (root.querySelector(".upsell-overlay")) {
+      U.debugLog("popup: an overlay is already open, skipping");
+      return;
+    }
 
     var proceed = function () {
+      U.debugLog("popup: showing popup for rule", rule.id);
       renderPopup(root, rule);
       U.markShown(rule.id);
       U.postEvent(rule.id, "shown");
@@ -51,6 +62,9 @@
         var alreadyInCart = offerVariantIds.some(function (id) {
           return cartVariantIds.indexOf(id) !== -1;
         });
+        if (alreadyInCart) {
+          U.debugLog("popup: offer already in cart and hideIfOfferAlreadyInCart is true — skipping");
+        }
         if (!alreadyInCart) proceed();
       })
       .catch(proceed);
@@ -145,6 +159,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     var popupRoot = document.getElementById(POPUP_ROOT_ID);
-    if (popupRoot) initPopup(popupRoot);
+    if (popupRoot) {
+      initPopup(popupRoot);
+    } else {
+      U.debugLog("popup: #" + POPUP_ROOT_ID + " not found on this page — is the \"Upsell popup\" app embed on?");
+    }
   });
 })();

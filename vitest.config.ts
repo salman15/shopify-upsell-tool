@@ -5,7 +5,7 @@ export default defineConfig({
     environment: "node",
     include: [
       "app/**/*.test.ts",
-      "extensions/upsell-storefront/**/*.test.ts",
+      "test/**/*.test.ts",
     ],
   },
 });

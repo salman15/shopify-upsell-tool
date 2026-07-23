@@ -151,11 +151,16 @@
   // section that supports app blocks (typically the cart page/drawer) ----------
 
   function initInlineCartBundle(root) {
+    U.debugLog("drawer: initInlineCartBundle() — inline app-block mode, root =", root);
     U.getRules().then(function (data) {
-      if (!data.cartBundleEnabled) return;
+      if (!data.cartBundleEnabled) {
+        U.debugLog("drawer: cartBundleEnabled is false in ToolSettings — skipping");
+        return;
+      }
       var bundleRules = data.rules.filter(function (r) {
         return r.toolType === "CART_BUNDLE";
       });
+      U.debugLog("drawer: " + bundleRules.length + " CART_BUNDLE rule(s) loaded", bundleRules);
       if (bundleRules.length === 0) return;
 
       refreshInlineBundle(root, bundleRules);
@@ -229,6 +234,7 @@
   // unlike the previous version which merely watched for changes alongside
   // whatever the theme was independently doing.
   function initDrawer() {
+    U.debugLog("drawer: initDrawer() — full drawer takeover mode (no inline app-block found on this page)");
     var overlay = document.createElement("div");
     overlay.className = "upsell-drawer-overlay";
     overlay.innerHTML =
@@ -371,6 +377,7 @@
     }
 
     U.onCartAdd(function (cart, addedProductIds) {
+      U.debugLog("drawer: onCartAdd fired with addedProductIds =", addedProductIds);
       // If Tool A's popup is about to claim this same add-to-cart event, let
       // it have the moment uninterrupted — don't have the drawer pop open on
       // top of (and hide) the popup before the customer can pick an option.
@@ -382,7 +389,12 @@
             })
           : [];
         var popupWillShow = U.pickMatchingRule(popupRules, addedProductIds);
-        if (!popupWillShow) open();
+        if (popupWillShow) {
+          U.debugLog("drawer: popup will claim this add — not opening the drawer");
+        } else {
+          U.debugLog("drawer: opening");
+          open();
+        }
       });
     });
 

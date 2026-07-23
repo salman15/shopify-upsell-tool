@@ -7,16 +7,51 @@
   if (window.__upsellCommonLoaded) return;
   window.__upsellCommonLoaded = true;
 
+  // Silent by default (never spams a real customer's console) — turn it on
+  // per-tab with ?upsell_debug=1 in the URL, or persistently for this
+  // browser with localStorage.setItem("upsell_debug", "1").
+  var DEBUG = /(?:^|[?&])upsell_debug=1(?:&|$)/.test(window.location.search);
+  if (!DEBUG) {
+    try {
+      DEBUG = window.localStorage.getItem("upsell_debug") === "1";
+    } catch (e) {
+      // localStorage can throw in locked-down/private-browsing contexts —
+      // debug logging just stays off.
+    }
+  }
+
+  function debugLog() {
+    if (!DEBUG) return;
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift("[upsell]");
+    console.log.apply(console, args);
+  }
+
   var state = { rulesPromise: null };
 
   function getRules() {
     if (!state.rulesPromise) {
+      debugLog("getRules() fetching /apps/upsell/rules ...");
       state.rulesPromise = fetch("/apps/upsell/rules", { headers: { Accept: "application/json" } })
         .then(function (r) {
-          return r.ok ? r.json() : { popupEnabled: false, cartBundleEnabled: false, rules: [] };
+          if (!r.ok) {
+            debugLog("getRules() got a non-OK response:", r.status, r.statusText);
+            return { popupEnabled: false, cartBundleEnabled: false, rules: [] };
+          }
+          return r.json();
         })
-        .catch(function () {
+        .catch(function (err) {
+          debugLog("getRules() fetch threw:", err);
           return { popupEnabled: false, cartBundleEnabled: false, rules: [] };
+        })
+        .then(function (data) {
+          debugLog(
+            "getRules() resolved: popupEnabled=" + data.popupEnabled +
+              " cartBundleEnabled=" + data.cartBundleEnabled +
+              " rules=" + data.rules.length,
+            data,
+          );
+          return data;
         });
     }
     return state.rulesPromise;
@@ -250,34 +285,56 @@
         // Set by our own error-fallback path below to let a retried native
         // submission through untouched — never intercept it a second time.
         if (form.__upsellBypass) {
+          debugLog("submit: bypassing our own retried native submission", form);
           form.__upsellBypass = false;
           return;
         }
+
+        var action = form.getAttribute("action") || "";
+        if (action.indexOf("/cart/add") === -1) return;
+
+        debugLog("submit: saw a /cart/add form submission", { action: action, subscribers: cartAddSubscribers.length });
 
         // Nothing on this page cares about add-to-cart — don't take on the
         // risk of intercepting it for no reason. Checked here (not at
         // load-time) so it's correct regardless of which of common/popup/
         // drawer.js finished registering subscribers first.
-        if (cartAddSubscribers.length === 0) return;
+        if (cartAddSubscribers.length === 0) {
+          debugLog("submit: no cartAddSubscribers registered (popup.js/drawer.js not initialized?) — letting it through natively");
+          return;
+        }
 
-        var action = form.getAttribute("action") || "";
-        if (action.indexOf("/cart/add") === -1) return;
+        var item = extractFormItem(form);
+        if (!item.id) {
+          // Couldn't confidently read a variant id off this form (unexpected
+          // markup, or a disabled/not-yet-selected variant field — FormData
+          // omits disabled controls) — don't guess. Let the theme handle the
+          // submission natively rather than intercepting into a doomed
+          // request.
+          console.warn("[upsell] add-to-cart form had no readable 'id' field, skipping interception:", form);
+          return;
+        }
 
+        debugLog("submit: intercepting, extracted item:", item);
         event.preventDefault();
         event.stopPropagation();
 
         var submitter = event.submitter;
         if (submitter) submitter.disabled = true;
 
-        var item = extractFormItem(form);
         addToCart([item])
           .then(function (addResponse) {
+            debugLog("submit: /cart/add.js succeeded:", addResponse);
             var addedItems = addResponse.items || [addResponse];
             var addedProductIds = addedItems.map(function (i) {
               return toGid("Product", i.product_id);
             });
             return getCart().then(function (cart) {
               syncThemeCartCount(cart);
+              debugLog(
+                "submit: notifying " + cartAddSubscribers.length + " subscriber(s) with addedProductIds:",
+                addedProductIds,
+              );
               cartAddSubscribers.forEach(function (fn) {
                 fn(cart, addedProductIds);
               });
@@ -286,11 +343,20 @@
           .catch(function (err) {
             // Our own fetch path failed — fall back to letting the original
             // submission go through natively rather than leaving the
-            // customer stuck with a button that does nothing.
+            // customer stuck with a button that does nothing. The submitter
+            // must be re-enabled *before* requestSubmit — a disabled
+            // submitter is not a valid one, and requestSubmit is called with
+            // no argument at all (submits as the form's default action)
+            // specifically to sidestep that.
             console.error("[upsell] add to cart failed, falling back to native submit:", err);
+            if (submitter) submitter.disabled = false;
             form.__upsellBypass = true;
-            if (form.requestSubmit) form.requestSubmit(submitter || undefined);
-            else form.submit();
+            try {
+              if (form.requestSubmit) form.requestSubmit();
+              else form.submit();
+            } catch (resubmitErr) {
+              console.error("[upsell] native fallback submit also failed:", resubmitErr);
+            }
           })
           .then(function () {
             if (submitter) submitter.disabled = false;
@@ -312,6 +378,7 @@
         );
         if (!trigger) return;
 
+        debugLog("click: intercepted cart icon click", trigger);
         event.preventDefault();
         event.stopPropagation();
         cartIconClickSubscribers.forEach(function (fn) {
@@ -346,5 +413,8 @@
     pickMatchingRule: pickMatchingRule,
     onCartAdd: onCartAdd,
     onCartIconClick: onCartIconClick,
+    debugLog: debugLog,
   };
+
+  debugLog("upsell-common.js loaded on", window.location.pathname);
 })();

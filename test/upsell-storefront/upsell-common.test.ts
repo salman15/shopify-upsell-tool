@@ -11,10 +11,19 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 // inside resolve against jsdom's globals exactly as they would in a real
 // browser, and it attaches window.UpsellCommon as a side effect — same
 // runtime behavior as loading it via <script>, with no source changes.
+//
+// This file must live outside extensions/upsell-storefront entirely — the
+// Shopify theme extension bundler only accepts assets/blocks/snippets/locales
+// as top-level directories (and, within assets/, only a fixed allowlist of
+// file extensions). Either violation fails the *entire* app preview at
+// startup, not just this file — so this lives at the repo root instead.
 let U: any;
 
 beforeAll(() => {
-  const code = readFileSync(join(__dirname, "upsell-common.js"), "utf-8");
+  const code = readFileSync(
+    join(__dirname, "../../extensions/upsell-storefront/assets/upsell-common.js"),
+    "utf-8",
+  );
   new Function(code)();
   U = (window as any).UpsellCommon;
 });
